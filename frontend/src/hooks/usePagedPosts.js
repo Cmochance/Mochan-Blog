@@ -21,9 +21,10 @@ export function usePagedPosts({ pageSize = 6 } = {}) {
           search: nextSearch
         });
 
+        const items = Array.isArray(data.items) ? data.items : [];
         setTotal(data.total || 0);
         setPage(nextPage);
-        setPosts((prev) => (replace ? data.items : [...prev, ...data.items]));
+        setPosts((prev) => (replace ? items : [...prev, ...items]));
       } catch (err) {
         setError(err.message || '加载失败');
       } finally {
