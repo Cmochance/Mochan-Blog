@@ -33,3 +33,7 @@ nginx/ssl/*.key
 # Build outputs
 dist/
 build/
+
+# traecode
+.trae
+
