@@ -21,7 +21,7 @@ export default function LoginModal({ isOpen, onClose }) {
       onClose();
       navigate('/admin');
     } catch (err) {
-      setError(err.message || '登录失败，请检查用户名和密码');
+      setError(err.message || '韵律不通，墨城不现');
     } finally {
       setLoading(false);
     }
@@ -33,7 +33,7 @@ export default function LoginModal({ isOpen, onClose }) {
     }}>
       <div className="modal-content">
         <div className="modal-header">
-          <h3 className="modal-title">管理员登录</h3>
+          <h3 className="modal-title">粉墨登场</h3>
           <button className="modal-close" onClick={onClose} type="button">×</button>
         </div>
         
@@ -46,7 +46,7 @@ export default function LoginModal({ isOpen, onClose }) {
               className="form-input"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="请输入管理员账号"
+              placeholder="墨城"
               required
             />
           </div>
@@ -59,7 +59,7 @@ export default function LoginModal({ isOpen, onClose }) {
               className="form-input"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="请输入管理员密码"
+              placeholder="墨韵"
               required
             />
           </div>
@@ -71,7 +71,7 @@ export default function LoginModal({ isOpen, onClose }) {
             className="form-submit"
             disabled={loading}
           >
-            {loading ? '登录中...' : '确认'}
+            {loading ? '登场中...' : '登场'}
           </button>
         </form>
       </div>

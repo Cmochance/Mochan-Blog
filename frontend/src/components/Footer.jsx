@@ -5,7 +5,7 @@ export default function Footer({ onLoginClick }) {
         className="footer-seal" 
         onClick={onLoginClick}
         style={{ cursor: 'pointer' }}
-        title="管理员登录"
+        title="粉墨登场"
       >
         印
       </div>
