@@ -1,8 +1,28 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
+const getBaseUrl = () => {
+  let url = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
+  // 移除末尾斜杠
+  url = url.replace(/\/$/, '');
+  
+  // 如果是相对路径（以 / 开头），直接返回
+  if (url.startsWith('/')) {
+    return url;
+  }
+  
+  // 如果没有协议头，自动补全 https://
+  if (!/^https?:\/\//i.test(url)) {
+    url = `https://${url}`;
+  }
+  
+  return url;
+};
+
+const API_BASE_URL = getBaseUrl();
 const TOKEN_KEY = 'mochan_admin_token';
 
 function buildUrl(path, params = {}) {
   const trimmed = path.replace(/^\/+/, '');
+  // 如果 API_BASE_URL 是绝对路径（http/https），URL 构造函数会忽略第二个参数
+  // 如果是相对路径，会基于 window.location.origin
   const url = new URL(`${API_BASE_URL}/${trimmed}`, window.location.origin);
 
   Object.entries(params).forEach(([key, value]) => {

@@ -1,5 +1,8 @@
+const path = require('path');
+
 try {
-  require('dotenv').config();
+  // 尝试加载根目录的 .env 文件
+  require('dotenv').config({ path: path.resolve(__dirname, '../../.env') });
 } catch (error) {
   // dotenv is optional in production
 }
