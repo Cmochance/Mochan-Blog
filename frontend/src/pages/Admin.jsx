@@ -130,7 +130,7 @@ export default function Admin() {
       <div className="admin-header">
         <h1 className="section-title">
           <span className="title-decoration">〖</span>
-          管理页面
+          墨城管理
           <span className="title-decoration">〗</span>
         </h1>
         {authState.status === 'authed' ? (
@@ -247,7 +247,7 @@ export default function Admin() {
             {error ? (
               <div className="error-state">
                 <p style={{ textAlign: 'center', color: 'var(--ink-light)' }}>
-                  管理列表加载失败
+                  墨城列表加载失败
                 </p>
               </div>
             ) : null}
@@ -262,7 +262,7 @@ export default function Admin() {
             {!loading && posts.length === 0 ? (
               <div className="empty-state">
                 <p style={{ textAlign: 'center', color: 'var(--ink-light)', fontFamily: 'var(--font-display)' }}>
-                  暂无文章
+                  暂无文章，来写一篇吧！
                 </p>
               </div>
             ) : (
