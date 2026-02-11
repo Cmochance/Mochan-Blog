@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { supabase } from './supabase.js';
+import { getSupabaseClients } from './supabase.js';
 
 const PUBLIC_NOVEL_SLUG = (import.meta.env.VITE_PUBLIC_NOVEL_SLUG || 'jishi-xiu').trim();
 
@@ -68,30 +68,62 @@ async function requireData(result, fallbackMessage) {
   return { data, count };
 }
 
+function isRetryableClientError(error) {
+  const message = String(error?.message || '');
+  return (
+    /Failed to fetch/i.test(message) ||
+    /NetworkError/i.test(message) ||
+    /fetch failed/i.test(message)
+  );
+}
+
+async function withSupabaseFallback(execute, fallbackMessage) {
+  const clients = getSupabaseClients();
+  let lastError = null;
+
+  for (let i = 0; i < clients.length; i += 1) {
+    const client = clients[i];
+    try {
+      return await execute(client);
+    } catch (error) {
+      lastError = error;
+      const canRetry = i < clients.length - 1 && isRetryableClientError(error);
+      if (!canRetry) {
+        throw error;
+      }
+    }
+  }
+
+  throw lastError || new Error(fallbackMessage);
+}
+
 export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
   const safePage = Math.max(Number(page) || 1, 1);
   const safePageSize = Math.min(Math.max(Number(pageSize) || 6, 1), 50);
   const from = (safePage - 1) * safePageSize;
   const to = from + safePageSize - 1;
 
-  let query = supabase
-    .from('blog_public_posts')
-    .select(
-      'slug,title,excerpt,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug',
-      { count: 'exact' }
-    )
-    .order('chapter_number', { ascending: false })
-    .order('source_updated_at', { ascending: false, nullsFirst: false })
-    .range(from, to);
+  const { data, count } = await withSupabaseFallback(async (supabase) => {
+    let query = supabase
+      .from('blog_public_posts')
+      .select(
+        'slug,title,excerpt,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug',
+        { count: 'exact' }
+      )
+      .order('chapter_number', { ascending: false })
+      .order('source_updated_at', { ascending: false, nullsFirst: false })
+      .range(from, to);
 
-  query = applyNovelFilter(query);
+    query = applyNovelFilter(query);
 
-  const searchFilter = buildSearchFilter(search);
-  if (searchFilter) {
-    query = query.or(searchFilter);
-  }
+    const searchFilter = buildSearchFilter(search);
+    if (searchFilter) {
+      query = query.or(searchFilter);
+    }
 
-  const { data, count } = await requireData(query, '加载文章列表失败');
+    return requireData(query, '加载文章列表失败');
+  }, '加载文章列表失败');
+
   const items = (data || []).map(mapPostSummary);
 
   return {
@@ -103,18 +135,20 @@ export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
 }
 
 export async function fetchPost(slug) {
-  let query = supabase
-    .from('blog_public_posts')
-    .select(
-      'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
-    )
-    .eq('slug', slug)
-    .limit(1);
+  const { data } = await withSupabaseFallback(async (supabase) => {
+    let query = supabase
+      .from('blog_public_posts')
+      .select(
+        'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
+      )
+      .eq('slug', slug)
+      .limit(1);
 
-  query = applyNovelFilter(query);
-  query = query.maybeSingle();
+    query = applyNovelFilter(query);
+    query = query.maybeSingle();
 
-  const { data } = await requireData(query, '加载文章详情失败');
+    return requireData(query, '加载文章详情失败');
+  }, '加载文章详情失败');
 
   if (!data) {
     throw new Error('文章不存在');
