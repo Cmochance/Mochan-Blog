@@ -37,3 +37,5 @@ build/
 # traecode
 .trae
 
+# Local review artifacts
+.kiro-review/

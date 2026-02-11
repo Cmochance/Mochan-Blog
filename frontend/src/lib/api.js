@@ -51,6 +51,15 @@ function applyNovelFilter(query) {
   return query.eq('novel_slug', PUBLIC_NOVEL_SLUG);
 }
 
+async function fetchFallbackNovelSlug(supabase) {
+  const { data } = await requireData(
+    supabase.from('blog_public_novels').select('slug').order('created_at', { ascending: true }).limit(1).maybeSingle(),
+    '加载文章列表失败'
+  );
+
+  return String(data?.slug || '').trim();
+}
+
 function buildSearchFilter(search) {
   const value = String(search || '').trim();
   if (!value) return '';
@@ -102,26 +111,54 @@ export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
   const safePageSize = Math.min(Math.max(Number(pageSize) || 6, 1), 50);
   const from = (safePage - 1) * safePageSize;
   const to = from + safePageSize - 1;
+  const searchFilter = buildSearchFilter(search);
 
   const { data, count } = await withSupabaseFallback(async (supabase) => {
-    let query = supabase
-      .from('blog_public_posts')
-      .select(
-        'slug,title,excerpt,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug',
-        { count: 'exact' }
-      )
-      .order('chapter_number', { ascending: false })
-      .order('source_updated_at', { ascending: false, nullsFirst: false })
-      .range(from, to);
+    const runQuery = async (novelSlug) => {
+      let query = supabase
+        .from('blog_public_posts')
+        .select(
+          'slug,title,excerpt,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug',
+          { count: 'exact' }
+        )
+        .order('chapter_number', { ascending: false })
+        .order('source_updated_at', { ascending: false, nullsFirst: false })
+        .range(from, to);
 
-    query = applyNovelFilter(query);
+      if (novelSlug) {
+        query = query.eq('novel_slug', novelSlug);
+      }
 
-    const searchFilter = buildSearchFilter(search);
-    if (searchFilter) {
-      query = query.or(searchFilter);
+      if (searchFilter) {
+        query = query.or(searchFilter);
+      }
+
+      return requireData(query, '加载文章列表失败');
+    };
+
+    const primary = await runQuery(PUBLIC_NOVEL_SLUG);
+    const hasPrimaryItems = Array.isArray(primary.data) && primary.data.length > 0;
+    const shouldFallback =
+      !hasPrimaryItems && safePage === 1 && !searchFilter && Boolean(PUBLIC_NOVEL_SLUG);
+
+    if (!shouldFallback) {
+      return primary;
     }
 
-    return requireData(query, '加载文章列表失败');
+    const fallbackSlug = await fetchFallbackNovelSlug(supabase);
+    if (!fallbackSlug || fallbackSlug === PUBLIC_NOVEL_SLUG) {
+      return primary;
+    }
+
+    const fallback = await runQuery(fallbackSlug);
+    if (Array.isArray(fallback.data) && fallback.data.length > 0) {
+      console.warn(
+        `[blog] No posts for novel_slug "${PUBLIC_NOVEL_SLUG}". Falling back to "${fallbackSlug}".`
+      );
+      return fallback;
+    }
+
+    return primary;
   }, '加载文章列表失败');
 
   const items = (data || []).map(mapPostSummary);
@@ -136,18 +173,31 @@ export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
 
 export async function fetchPost(slug) {
   const { data } = await withSupabaseFallback(async (supabase) => {
-    let query = supabase
-      .from('blog_public_posts')
-      .select(
-        'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
-      )
-      .eq('slug', slug)
-      .limit(1);
+    const buildQuery = () =>
+      supabase
+        .from('blog_public_posts')
+        .select(
+          'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
+        )
+        .eq('slug', slug)
+        .limit(1)
+        .maybeSingle();
 
-    query = applyNovelFilter(query);
-    query = query.maybeSingle();
+    const primary = await requireData(applyNovelFilter(buildQuery()), '加载文章详情失败');
+    if (primary.data || !PUBLIC_NOVEL_SLUG) {
+      return primary;
+    }
 
-    return requireData(query, '加载文章详情失败');
+    // If novel slug changed, keep article page reachable by globally unique slug.
+    const fallback = await requireData(buildQuery(), '加载文章详情失败');
+    if (fallback.data) {
+      console.warn(
+        `[blog] Post "${slug}" not found under novel_slug "${PUBLIC_NOVEL_SLUG}", fetched without novel filter.`
+      );
+      return fallback;
+    }
+
+    return primary;
   }, '加载文章详情失败');
 
   if (!data) {
