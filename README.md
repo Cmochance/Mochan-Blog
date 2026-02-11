@@ -1,117 +1,77 @@
 # 墨韵流芳 | Mochan Blog
 
-> 一个水墨风格的个人博客系统
+> 水墨风格静态博客前端，直接读取 `MochanAI_Letters` 的公开章节数据（仅展示指定小说）。
 
-![水墨风博客](https://img.shields.io/badge/style-水墨风-black)
-![Docker](https://img.shields.io/badge/docker-ready-blue)
-![Node.js](https://img.shields.io/badge/node-20+-green)
+## 当前架构
 
-## ✨ 特色
+- `frontend/`: React + Vite 静态站点（唯一需要部署的模块）
+- `backend/`: 旧版 API（已不再依赖，可保留作历史参考）
+- 数据源: Supabase 公共只读表 `blog_public_posts`（位于 `MochanAI_Letters` 数据库）
 
-- 🎨 **水墨画风格** - 动态生成的山水背景，宣纸纹理效果
-- 📝 **Markdown 支持** - 使用 Markdown 撰写文章
-- 🚀 **Docker 部署** - 一键启动，开箱即用
-- 🎭 **SPA 体验** - 流畅的页面切换动画
-- 📱 **响应式设计** - 完美适配各种设备
+## 功能特性
 
-## 🏃 快速开始
+- 水墨视觉风格与响应式布局
+- 章节列表/归档/详情阅读
+- Markdown 渲染（前端安全清洗）
+- 仅展示白名单小说（默认 slug: `jishi-xiu`）
 
-### 方式一：Docker 部署（推荐）
+## 快速开始
+
+### 1) 配置环境变量
+
+复制并填写：`frontend/.env.example`
 
 ```bash
-# 克隆项目
-git clone https://github.com/your-username/mochan-blog.git
-cd mochan-blog
-
-# 启动服务
-docker-compose up -d
-
-# 访问 http://localhost
+cd frontend
+cp .env.example .env.local
 ```
 
-### 方式二：本地开发
+必填项：
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `VITE_PUBLIC_NOVEL_SLUG`（默认 `jishi-xiu`）
+
+### 2) 本地运行
 
 ```bash
-# 安装依赖
+cd frontend
 npm install
-
-# 启动开发服务器
 npm run dev
-
-# 访问 http://localhost:3000
 ```
 
-## 📁 项目结构
+默认访问：[http://localhost:5173](http://localhost:5173)
 
-```
-mochan-blog/
-├── public/              # 静态资源
-│   ├── css/
-│   │   └── style.css    # 水墨风格样式
-│   └── js/
-│       ├── app.js       # 应用主逻辑
-│       └── ink-background.js  # 水墨背景生成
-├── server/
-│   └── app.js           # Express 服务器
-├── posts/               # Markdown 文章目录
-│   └── *.md
-├── nginx/               # Nginx 配置
-├── Dockerfile
-├── docker-compose.yml
-└── package.json
-```
+## 与 MochanAI_Letters 对接
 
-## 📝 撰写文章
+你需要先在 `MochanAI_Letters` 数据库执行迁移：
 
-在 `posts/` 目录下创建 `.md` 文件：
+- `/Users/alysechen/alysechen/github/MochanAI_Letters/letters-backend/drizzle/migrations/0006_blog_public_posts.sql`
 
-```markdown
----
-title: 文章标题
-date: 2024-01-15
-tags: [标签1, 标签2]
-excerpt: 文章摘要...
----
+该迁移会创建：
 
-# 正文内容
+- `blog_public_novels`：公开小说白名单
+- `blog_public_posts`：博客读取投影表
+- 触发器：章节新增/修改/删除自动同步
+- RLS：仅开放只读查询给 `anon/authenticated`
 
-这里是 Markdown 格式的正文...
+然后将小说「几时休」加入白名单：
+
+```sql
+INSERT INTO blog_public_novels (novel_id, slug, title)
+SELECT id, 'jishi-xiu', title
+FROM novels
+WHERE title = '几时休'
+LIMIT 1
+ON CONFLICT (novel_id) DO NOTHING;
 ```
 
-## 🎨 设计理念
+## 部署
 
-**「墨韵流芳」** - 以传统水墨画为灵感，追求：
+推荐部署 `frontend/` 到 Vercel（静态站点）。
 
-- **留白** - 给予读者思考的空间
-- **意境** - 每个细节都有其存在的意义
-- **韵律** - 流畅的动画和交互体验
+- Build Command: `npm run build`
+- Output Directory: `dist`
+- 环境变量使用上文 `VITE_*`
 
-### 色彩体系
-
-| 名称 | 色值 | 用途 |
-|------|------|------|
-| 墨色 | `#1a1a1a` | 主要文字 |
-| 宣纸 | `#f5f1e8` | 背景色 |
-| 朱砂 | `#c23a2b` | 强调点缀 |
-| 淡墨 | `#6b6b6b` | 次要文字 |
-
-## 🔧 配置
-
-### 环境变量
-
-| 变量名 | 默认值 | 说明 |
-|--------|--------|------|
-| `PORT` | `3000` | 服务端口 |
-| `NODE_ENV` | `development` | 运行环境 |
-
-### Nginx 配置
-
-生产环境建议使用 Nginx 反向代理，配置文件位于 `nginx/nginx.conf`。
-
-## 📜 开源协议
-
-MIT License
-
----
-
-*「水墨丹青，意在笔先」*
+详细步骤见：`deployment.md`

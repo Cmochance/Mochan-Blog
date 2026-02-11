@@ -41,7 +41,7 @@ export default function Home() {
       <section className="posts-section">
         <h2 className="section-title">
           <span className="title-decoration">〖</span>
-          近期文章
+          几时休 · 最新章节
           <span className="title-decoration">〗</span>
         </h2>
         <SearchBar onSearch={setSearch} placeholder="搜索标题或内容..." />
@@ -64,7 +64,7 @@ export default function Home() {
         {!loading && posts.length === 0 ? (
           <div className="empty-state">
             <p style={{ textAlign: 'center', color: 'var(--ink-light)', fontFamily: 'var(--font-display)' }}>
-              暂无文章，执笔待书...
+              暂无章节，执笔待书...
             </p>
           </div>
         ) : (

@@ -1,12 +1,7 @@
-export default function Footer({ onLoginClick }) {
+export default function Footer() {
   return (
     <footer className="footer">
-      <div 
-        className="footer-seal" 
-        onClick={onLoginClick}
-        style={{ cursor: 'pointer' }}
-        title="粉墨登场"
-      >
+      <div className="footer-seal">
         印
       </div>
       <p className="footer-text">墨韵流芳 2026</p>

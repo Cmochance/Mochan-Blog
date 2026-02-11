@@ -1,82 +1,73 @@
-# 部署指南 (Vercel + Turso)
+# 部署指南（静态前端 + Supabase）
 
-## 结构说明
+本文档对应当前方案：`Mochan-Blog` 仅部署前端，数据直接读取 `MochanAI_Letters` 的 Supabase 数据库公开投影表。
 
-- `frontend/` React 前端 (Vite)
-- `backend/` Node API (Vercel Serverless)
-- `database/` Turso 数据库初始化
+## 0. 前提
 
-## 1. 创建 Turso 数据库
+- 你已有可用的 `MochanAI_Letters` Supabase 数据库。
+- 已在 `MochanAI_Letters` 执行迁移：
+  - `/Users/alysechen/alysechen/github/MochanAI_Letters/letters-backend/drizzle/migrations/0006_blog_public_posts.sql`
 
-1. 安装 Turso CLI 并登录。
-2. 创建数据库 (示例名称):
-   ```bash
-   turso db create mochan-blog
-   ```
-3. 生成访问令牌:
-   ```bash
-   turso db tokens create mochan-blog
-   ```
-4. 记录数据库地址与 token，稍后用于环境变量。
+## 1. 在 Letters 数据库开启公开小说
 
-## 2. 初始化数据库结构
+在 Supabase SQL Editor 执行：
 
-```bash
-turso db shell mochan-blog < database/migrations/001_init.sql
+```sql
+INSERT INTO blog_public_novels (novel_id, slug, title)
+SELECT id, 'jishi-xiu', title
+FROM novels
+WHERE title = '几时休'
+LIMIT 1
+ON CONFLICT (novel_id) DO NOTHING;
 ```
 
-如果你使用 Turso Web Console，也可以在 SQL Editor 中粘贴 `database/migrations/001_init.sql` 执行。
+验证是否成功：
 
-## 3. (可选) 导入旧文章
+```sql
+SELECT novel_id, slug, title, created_at
+FROM blog_public_novels
+WHERE slug = 'jishi-xiu';
 
-将旧的 Markdown 文件放入 `database/seed/posts/`，然后执行:
-
-```bash
-cd backend
-npm install
-node scripts/import-posts.js
+SELECT chapter_id, slug, title, chapter_number, source_updated_at
+FROM blog_public_posts
+WHERE novel_slug = 'jishi-xiu'
+ORDER BY chapter_number DESC
+LIMIT 20;
 ```
 
-## 4. 部署后端到 Vercel
+## 2. 本地验证前端
 
-1. 新建 Vercel Project，Root Directory 选择 `backend`。
-2. 配置环境变量:
-   - `ADMIN_USERNAME`
-   - `ADMIN_PASSWORD`
-   - `JWT_SECRET`
-   - `TURSO_DATABASE_URL`
-   - `TURSO_AUTH_TOKEN`
-   - `CORS_ORIGIN` (前端域名，如 `https://your-frontend.vercel.app`)
-3. 部署完成后记录后端地址，例如:
-   `https://your-backend.vercel.app/api`
-
-## 5. 部署前端到 Vercel
-
-1. 新建 Vercel Project，Root Directory 选择 `frontend`。
-2. 配置环境变量:
-   - `VITE_API_BASE_URL=https://your-backend.vercel.app/api`
-3. 部署完成后打开前端地址验证。
-
-## 6. 验证与管理
-
-- 公共页面仅展示内容，无登录入口。
-- 管理入口: `https://your-frontend.vercel.app/admin`
-- 使用管理员账号登录后可发布/删除文章。
-
-## 本地开发 (可选)
-
-前端:
 ```bash
 cd frontend
+cp .env.example .env.local
+```
+
+填写：
+
+- `VITE_SUPABASE_URL=https://<project-ref>.supabase.co`
+- `VITE_SUPABASE_ANON_KEY=<anon-key>`
+- `VITE_PUBLIC_NOVEL_SLUG=jishi-xiu`
+
+运行：
+
+```bash
 npm install
 npm run dev
 ```
 
-后端:
-```bash
-cd backend
-npm install
-node src/server.js
-```
+## 3. 部署到 Vercel
 
-`.env` 参考 `backend/.env.example`。
+1. 新建 Vercel Project，Root Directory 选择 `frontend`。
+2. 设置环境变量（与 `.env.local` 相同）：
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+   - `VITE_PUBLIC_NOVEL_SLUG`
+3. 部署完成后访问站点验证。
+
+## 4. 同步机制说明
+
+- 章节新增/修改：`chapters` 触发器自动 upsert 到 `blog_public_posts`
+- 章节删除：自动从 `blog_public_posts` 删除
+- 白名单移除：从 `blog_public_novels` 删除后，会自动清空该小说的公开文章
+
+因此不再需要 `Mochan-Blog/backend` 的发布/同步逻辑。

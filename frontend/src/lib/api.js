@@ -1,119 +1,130 @@
-const getBaseUrl = () => {
-  let url = (import.meta.env.VITE_API_BASE_URL || '/api').trim();
-  // 移除末尾斜杠
-  url = url.replace(/\/$/, '');
-  
-  // 如果是相对路径（以 / 开头），直接返回
-  if (url.startsWith('/')) {
-    return url;
-  }
-  
-  // 如果没有协议头，自动补全 https://
-  if (!/^https?:\/\//i.test(url)) {
-    url = `https://${url}`;
-  }
-  
-  return url;
-};
+import DOMPurify from 'dompurify';
+import { marked } from 'marked';
+import { supabase } from './supabase.js';
 
-const API_BASE_URL = getBaseUrl();
-const TOKEN_KEY = 'mochan_admin_token';
+const PUBLIC_NOVEL_SLUG = (import.meta.env.VITE_PUBLIC_NOVEL_SLUG || 'jishi-xiu').trim();
 
-function buildUrl(path, params = {}) {
-  const trimmed = path.replace(/^\/+/, '');
-  // 如果 API_BASE_URL 是绝对路径（http/https），URL 构造函数会忽略第二个参数
-  // 如果是相对路径，会基于 window.location.origin
-  const url = new URL(`${API_BASE_URL}/${trimmed}`, window.location.origin);
+marked.setOptions({
+  gfm: true,
+  breaks: true
+});
 
-  Object.entries(params).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== '') {
-      url.searchParams.set(key, value);
-    }
-  });
+function createExcerpt(markdown) {
+  const text = String(markdown || '')
+    .replace(/[#*`>\-\[\]\(\)]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-  return url.toString();
+  if (!text) return '';
+  return text.length <= 150 ? text : `${text.slice(0, 150)}...`;
 }
 
-export function getToken() {
-  return localStorage.getItem(TOKEN_KEY);
+function renderMarkdown(markdown) {
+  const html = marked.parse(String(markdown || ''));
+  return DOMPurify.sanitize(html);
 }
 
-export function setToken(token) {
-  if (!token) {
-    localStorage.removeItem(TOKEN_KEY);
-    return;
+function normalizeTags(rawTags) {
+  if (!rawTags) return [];
+  if (Array.isArray(rawTags)) {
+    return rawTags.map((tag) => String(tag).trim()).filter(Boolean);
   }
-  localStorage.setItem(TOKEN_KEY, token);
+  return [];
 }
 
-export function logout() {
-  localStorage.removeItem(TOKEN_KEY);
+function normalizeDate(row) {
+  return row.source_updated_at || row.source_created_at || row.updated_at || row.created_at;
 }
 
-async function request(path, options = {}) {
-  const { params, ...fetchOptions } = options;
-  const headers = { ...(fetchOptions.headers || {}) };
-
-  if (fetchOptions.body && !headers['Content-Type']) {
-    headers['Content-Type'] = 'application/json';
-  }
-
-  const token = getToken();
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const response = await fetch(buildUrl(path, params), {
-    ...fetchOptions,
-    headers
-  });
-
-  const data = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    const error = new Error(data.message || '请求失败');
-    error.status = response.status;
-    throw error;
-  }
-
-  return data;
+function mapPostSummary(row) {
+  return {
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt || createExcerpt(row.content_markdown),
+    tags: normalizeTags(row.tags),
+    date: normalizeDate(row)
+  };
 }
 
-export async function login(username, password) {
-  const data = await request('auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ username, password })
-  });
-
-  if (data.token) {
-    setToken(data.token);
-  }
-
-  return data;
+function applyNovelFilter(query) {
+  if (!PUBLIC_NOVEL_SLUG) return query;
+  return query.eq('novel_slug', PUBLIC_NOVEL_SLUG);
 }
 
-export async function authStatus() {
-  return request('auth/status', { method: 'GET' });
+function buildSearchFilter(search) {
+  const value = String(search || '').trim();
+  if (!value) return '';
+
+  // PostgREST `or` syntax; comma is condition separator so strip it from user input.
+  const safe = value.replace(/,/g, ' ').replace(/[%]/g, '');
+  return `title.ilike.%${safe}%,content_markdown.ilike.%${safe}%,excerpt.ilike.%${safe}%`;
+}
+
+async function requireData(result, fallbackMessage) {
+  const { data, error, count } = result;
+  if (error) {
+    throw new Error(error.message || fallbackMessage);
+  }
+  return { data, count };
 }
 
 export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
-  return request('posts', {
-    method: 'GET',
-    params: { page, pageSize, q: search }
-  });
+  const safePage = Math.max(Number(page) || 1, 1);
+  const safePageSize = Math.min(Math.max(Number(pageSize) || 6, 1), 50);
+  const from = (safePage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  let query = supabase
+    .from('blog_public_posts')
+    .select(
+      'slug,title,excerpt,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug',
+      { count: 'exact' }
+    )
+    .order('chapter_number', { ascending: false })
+    .order('source_updated_at', { ascending: false, nullsFirst: false })
+    .range(from, to);
+
+  query = applyNovelFilter(query);
+
+  const searchFilter = buildSearchFilter(search);
+  if (searchFilter) {
+    query = query.or(searchFilter);
+  }
+
+  const { data, count } = await requireData(query, '加载文章列表失败');
+  const items = (data || []).map(mapPostSummary);
+
+  return {
+    items,
+    total: count || 0,
+    page: safePage,
+    pageSize: safePageSize
+  };
 }
 
 export async function fetchPost(slug) {
-  return request(`posts/${slug}`, { method: 'GET' });
-}
+  let query = supabase
+    .from('blog_public_posts')
+    .select(
+      'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
+    )
+    .eq('slug', slug)
+    .limit(1);
 
-export async function createPost({ title, content, tags }) {
-  return request('posts', {
-    method: 'POST',
-    body: JSON.stringify({ title, content, tags })
-  });
-}
+  query = applyNovelFilter(query);
+  query = query.maybeSingle();
 
-export async function deletePost(slug) {
-  return request(`posts/${slug}`, { method: 'DELETE' });
+  const { data } = await requireData(query, '加载文章详情失败');
+
+  if (!data) {
+    throw new Error('文章不存在');
+  }
+
+  return {
+    slug: data.slug,
+    title: data.title,
+    date: normalizeDate(data),
+    tags: normalizeTags(data.tags),
+    contentHtml: renderMarkdown(data.content_markdown)
+  };
 }

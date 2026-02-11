@@ -22,7 +22,7 @@ export default function Archive() {
     <section className="archive-page">
       <h1 className="section-title">
         <span className="title-decoration">〖</span>
-        文章归档
+        几时休 · 章节归档
         <span className="title-decoration">〗</span>
       </h1>
       <SearchBar onSearch={setSearch} placeholder="搜索标题或内容..." />
@@ -43,7 +43,7 @@ export default function Archive() {
       {!loading && posts.length === 0 ? (
         <div className="empty-state">
           <p style={{ textAlign: 'center', color: 'var(--ink-light)', fontFamily: 'var(--font-display)' }}>
-            暂无归档内容
+            暂无章节归档
           </p>
         </div>
       ) : null}

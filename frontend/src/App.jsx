@@ -5,7 +5,6 @@ import Home from './pages/Home.jsx';
 import Archive from './pages/Archive.jsx';
 import About from './pages/About.jsx';
 import Post from './pages/Post.jsx';
-import Admin from './pages/Admin.jsx';
 import NotFound from './pages/NotFound.jsx';
 
 export default function App() {
@@ -19,7 +18,6 @@ export default function App() {
           <Route path="/archive" element={<Archive />} />
           <Route path="/about" element={<About />} />
           <Route path="/post/:slug" element={<Post />} />
-          <Route path="/admin" element={<Admin />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Layout>
