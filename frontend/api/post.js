@@ -51,6 +51,26 @@ async function queryPost({ supabase, slug, novelSlug }) {
   return data || null;
 }
 
+async function queryPostByChapterId({ supabase, chapterId, novelSlug }) {
+  let query = supabase
+    .from('blog_public_posts')
+    .select(
+      'slug,title,tags,content_markdown,source_created_at,source_updated_at,created_at,updated_at,chapter_number,novel_slug'
+    )
+    .eq('chapter_id', chapterId)
+    .limit(1);
+
+  if (novelSlug) {
+    query = query.eq('novel_slug', novelSlug);
+  }
+
+  const { data, error } = await query.maybeSingle();
+  if (error) {
+    throw new Error(error.message || '加载文章详情失败');
+  }
+  return data || null;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method Not Allowed' });
@@ -83,6 +103,27 @@ export default async function handler(req, res) {
       });
       if (row) {
         usedNovelSlug = String(row.novel_slug || '').trim();
+      }
+    }
+
+    // Backward compatibility for legacy slugs like "chapter-4".
+    if (!row) {
+      const match = /^chapter-(\d+)$/i.exec(slug);
+      const chapterId = match ? Number.parseInt(match[1], 10) : NaN;
+      if (!Number.isNaN(chapterId) && chapterId > 0) {
+        row = await queryPostByChapterId({
+          supabase,
+          chapterId,
+          novelSlug: configuredNovelSlug
+        });
+
+        if (!row && configuredNovelSlug) {
+          row = await queryPostByChapterId({
+            supabase,
+            chapterId,
+            novelSlug: ''
+          });
+        }
       }
     }
 
