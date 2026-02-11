@@ -31,6 +31,7 @@ cp .env.example .env.local
 - `VITE_SUPABASE_URL`
 - `VITE_SUPABASE_ANON_KEY`
 - `VITE_PUBLIC_NOVEL_SLUG`（默认 `jishi-xiu`）
+- `VITE_PROXY_API_ENABLED`（可选，默认 `true`，开启同源 `/api` 读取兜底）
 
 ### 2) 本地运行
 

@@ -3,6 +3,7 @@ import { marked } from 'marked';
 import { getSupabaseClients } from './supabase.js';
 
 const PUBLIC_NOVEL_SLUG = (import.meta.env.VITE_PUBLIC_NOVEL_SLUG || 'jishi-xiu').trim();
+const PROXY_API_ENABLED = (import.meta.env.VITE_PROXY_API_ENABLED || 'true').trim() !== 'false';
 
 marked.setOptions({
   gfm: true,
@@ -69,6 +70,76 @@ function buildSearchFilter(search) {
   return `title.ilike.%${safe}%,content_markdown.ilike.%${safe}%,excerpt.ilike.%${safe}%`;
 }
 
+function buildQueryString(params) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null) return;
+    const text = String(value);
+    if (!text) return;
+    searchParams.set(key, text);
+  });
+  return searchParams.toString();
+}
+
+function canUseProxyApi() {
+  return PROXY_API_ENABLED && typeof window !== 'undefined';
+}
+
+async function fetchProxyJson(path, params) {
+  const query = buildQueryString(params || {});
+  const url = query ? `${path}?${query}` : path;
+  const response = await fetch(url, {
+    method: 'GET',
+    credentials: 'same-origin',
+    headers: {
+      Accept: 'application/json'
+    }
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || `Proxy request failed: ${response.status}`);
+  }
+  return payload;
+}
+
+async function fetchPostsViaProxy({ page, pageSize, search }) {
+  if (!canUseProxyApi()) return null;
+  const payload = await fetchProxyJson('/api/posts', {
+    page,
+    pageSize,
+    search,
+    novelSlug: PUBLIC_NOVEL_SLUG
+  });
+
+  return {
+    items: Array.isArray(payload.items) ? payload.items : [],
+    total: Number(payload.total) || 0,
+    page: Number(payload.page) || page,
+    pageSize: Number(payload.pageSize) || pageSize
+  };
+}
+
+async function fetchPostViaProxy(slug) {
+  if (!canUseProxyApi()) return null;
+  const payload = await fetchProxyJson('/api/post', {
+    slug,
+    novelSlug: PUBLIC_NOVEL_SLUG
+  });
+
+  if (!payload || !payload.slug) {
+    throw new Error('文章不存在');
+  }
+
+  return {
+    slug: payload.slug,
+    title: payload.title,
+    date: payload.date,
+    tags: normalizeTags(payload.tags),
+    contentHtml: renderMarkdown(payload.contentMarkdown)
+  };
+}
+
 async function requireData(result, fallbackMessage) {
   const { data, error, count } = result;
   if (error) {
@@ -112,6 +183,22 @@ export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
   const from = (safePage - 1) * safePageSize;
   const to = from + safePageSize - 1;
   const searchFilter = buildSearchFilter(search);
+
+  try {
+    const proxyData = await fetchPostsViaProxy({
+      page: safePage,
+      pageSize: safePageSize,
+      search
+    });
+    if (proxyData) {
+      return proxyData;
+    }
+  } catch (error) {
+    if (!isRetryableClientError(error)) {
+      // Proxy route can fail on first deploy/misconfig; fall back to direct Supabase.
+      console.warn(`[blog] Proxy posts endpoint failed, fallback to direct Supabase: ${error.message}`);
+    }
+  }
 
   const { data, count } = await withSupabaseFallback(async (supabase) => {
     const runQuery = async (novelSlug) => {
@@ -172,6 +259,17 @@ export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
 }
 
 export async function fetchPost(slug) {
+  try {
+    const proxyData = await fetchPostViaProxy(slug);
+    if (proxyData) {
+      return proxyData;
+    }
+  } catch (error) {
+    if (!isRetryableClientError(error)) {
+      console.warn(`[blog] Proxy post endpoint failed, fallback to direct Supabase: ${error.message}`);
+    }
+  }
+
   const { data } = await withSupabaseFallback(async (supabase) => {
     const buildQuery = () =>
       supabase
