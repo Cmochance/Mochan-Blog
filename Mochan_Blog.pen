@@ -1,0 +1,84 @@
+{
+  "version": "2.6",
+  "children": [
+    {
+      "type": "frame",
+      "id": "bi8Au",
+      "x": 0,
+      "y": 0,
+      "name": "Frame",
+      "clip": true,
+      "width": 800,
+      "height": 600,
+      "fill": "#ebe1c8ff",
+      "layout": "none"
+    },
+    {
+      "type": "frame",
+      "id": "iAW2Z",
+      "x": 0,
+      "y": 5.684341886080802e-14,
+      "name": "SideBar",
+      "clip": true,
+      "width": 231,
+      "height": 600,
+      "fill": "#FFFFFF",
+      "layout": "none",
+      "children": [
+        {
+          "type": "rectangle",
+          "id": "Wgi3o",
+          "x": 0,
+          "y": 521,
+          "name": "sidebar_admin",
+          "fill": "#CCCCCC",
+          "width": 231,
+          "height": 79
+        },
+        {
+          "type": "rectangle",
+          "id": "G43aZ",
+          "x": 0,
+          "y": 91.99999999999994,
+          "name": "sidebar_guide",
+          "fill": "#CCCCCC",
+          "width": 231,
+          "height": 417
+        },
+        {
+          "type": "rectangle",
+          "id": "wWUeU",
+          "x": 0,
+          "y": -5.684341886080802e-14,
+          "name": "sidebar_title",
+          "fill": "#CCCCCC",
+          "width": 231,
+          "height": 79
+        },
+        {
+          "type": "icon_font",
+          "id": "Ep9Zd",
+          "x": 37.491597527825206,
+          "y": 28.40000915527338,
+          "name": "logo",
+          "width": 24,
+          "height": 24,
+          "iconFontName": "bot",
+          "iconFontFamily": "lucide",
+          "fill": "#000000"
+        },
+        {
+          "type": "text",
+          "id": "xszPz",
+          "x": 71,
+          "y": 31.999999999999943,
+          "fill": "#000000",
+          "content": "MochanAI",
+          "fontFamily": "Inter",
+          "fontSize": 16,
+          "fontWeight": "700"
+        }
+      ]
+    }
+  ]
+}
