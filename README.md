@@ -5,7 +5,8 @@
 ## 当前架构
 
 - 根目录：React + Vite 静态站点
-- `src/content/posts.js`：本地静态文章数据
+- `posts/`：根目录文章目录，每篇文章一个独立文件
+- `src/content/posts.js`：文章聚合入口，自动读取 `posts/*.post.js`
 - 构建产物：`dist/`
 
 ## 功能特性
@@ -38,3 +39,11 @@ npm run build
 ```
 
 构建完成后，直接部署 `dist/` 即可。
+
+## 发布文章
+
+1. 复制 `posts/_template.js` 为一个新文件。
+2. 将文件名改为 `你的-slug.post.js`，放在 `posts/` 目录下。
+3. 按模板填写 `slug`、`title`、`date`、`tags`、`contentMarkdown`，`excerpt` 可选。
+4. 本地执行 `npm run dev` 或 `npm run build` 确认无误。
+5. 推送到 GitHub 后，Pages 会自动重新部署。
