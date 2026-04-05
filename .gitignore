@@ -34,8 +34,5 @@ nginx/ssl/*.key
 dist/
 build/
 
-# traecode
-.trae
-
 # Local review artifacts
 .kiro-review/
