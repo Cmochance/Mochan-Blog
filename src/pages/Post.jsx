@@ -94,6 +94,22 @@ export default function Post() {
         className="article-content"
         dangerouslySetInnerHTML={{ __html: post.contentHtml }}
       />
+
+      {/* 评论区 */}
+      {post.comments && post.comments.length > 0 && (
+        <section className="article-comments">
+          <h3 className="comments-title">评论区</h3>
+          {post.comments.map((comment) => (
+            <div key={comment.id} className="comment-item">
+              <div className="comment-meta">
+                <span className="comment-author">{comment.author}</span>
+                <span className="comment-date">{formatDate(comment.date)}</span>
+              </div>
+              <div className="comment-content">{comment.content}</div>
+            </div>
+          ))}
+        </section>
+      )}
     </article>
   );
 }

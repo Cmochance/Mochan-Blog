@@ -1181,3 +1181,63 @@ body {
     transform: translateY(0);
   }
 }
+
+/* ========================================
+   评论区
+   ======================================== */
+.article-comments {
+  max-width: 750px;
+  margin: var(--spacing-xl) auto 0;
+  padding-top: var(--spacing-lg);
+  border-top: 1px solid var(--paper-aged);
+}
+
+.comments-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--ink-dark);
+  margin-bottom: var(--spacing-md);
+  letter-spacing: 0.1em;
+  padding-left: var(--spacing-sm);
+  border-left: 3px solid var(--cinnabar);
+}
+
+.comment-item {
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border: 1px solid var(--paper-aged);
+  background: rgba(255, 255, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+.comment-item:hover {
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.comment-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px dashed var(--paper-aged);
+}
+
+.comment-author {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink-dark);
+  letter-spacing: 0.05em;
+}
+
+.comment-date {
+  font-size: 0.85rem;
+  color: var(--ink-wash);
+}
+
+.comment-content {
+  font-size: 0.95rem;
+  line-height: 1.8;
+  color: var(--ink-medium);
+}
