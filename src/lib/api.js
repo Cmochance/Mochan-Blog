@@ -1,6 +1,6 @@
 import DOMPurify from 'dompurify';
 import { marked } from 'marked';
-import { posts } from '../content/posts.js';
+import { comparePosts, posts } from '../content/posts.js';
 
 marked.setOptions({
   gfm: true,
@@ -38,7 +38,7 @@ const allPosts = [...posts]
     excerpt: post.excerpt || createExcerpt(post.contentMarkdown),
     tags: Array.isArray(post.tags) ? post.tags : []
   }))
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  .sort(comparePosts);
 
 export async function fetchPosts({ page = 1, pageSize = 6, search = '' } = {}) {
   const safePage = Math.max(Number(page) || 1, 1);

@@ -45,5 +45,6 @@ npm run build
 1. 复制 `posts/_template.js` 为一个新文件。
 2. 将文件名改为 `你的-slug.post.js`，放在 `posts/` 目录下。
 3. 按模板填写 `slug`、`title`、`date`、`tags`、`contentMarkdown`，`excerpt` 可选。
-4. 本地执行 `npm run dev` 或 `npm run build` 确认无误。
-5. 推送到 GitHub 后，Pages 会自动重新部署。
+4. 文章列表优先按 `date` 倒序排列；同一天发布的文章按文件名主干倒序排列，适合连载章节使用 `YYMMDD-ji-shi-xiu-卷号-章号.post.js` 这样的命名。
+5. 本地执行 `npm run dev` 或 `npm run build` 确认无误。
+6. 推送到 GitHub 后，Pages 会自动重新部署。

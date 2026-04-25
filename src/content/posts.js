@@ -8,6 +8,10 @@ function normalizePost(post, sourcePath) {
     throw new Error(`Invalid post module: ${sourcePath}`);
   }
 
+  const sortName = sourcePath
+    .split('/')
+    .pop()
+    .replace(/\.post\.js$/, '');
   const slug = String(post.slug || '').trim();
   const title = String(post.title || '').trim();
   const date = String(post.date || '').trim();
@@ -19,6 +23,7 @@ function normalizePost(post, sourcePath) {
 
   return {
     ...post,
+    sortName,
     slug,
     title,
     date,
@@ -30,9 +35,16 @@ function normalizePost(post, sourcePath) {
   };
 }
 
+export function comparePosts(a, b) {
+  const dateOrder = new Date(b.date).getTime() - new Date(a.date).getTime();
+  if (dateOrder !== 0) return dateOrder;
+
+  return String(b.sortName || b.slug).localeCompare(String(a.sortName || a.slug));
+}
+
 const loadedPosts = Object.entries(modules)
   .map(([sourcePath, post]) => normalizePost(post, sourcePath))
-  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  .sort(comparePosts);
 
 const duplicateSlugs = loadedPosts.reduce((duplicates, post, index) => {
   const duplicated = loadedPosts.findIndex((candidate) => candidate.slug === post.slug) !== index;
