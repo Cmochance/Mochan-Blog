@@ -28,5 +28,13 @@ export default {
 - 不定期记录创作心得与修仙文化考据  
 
 > 笔落惊风雨，文成泣鬼神。愿此路有始有终，何时方休，待君共阅。
-`
+`,
+  comments: [
+    {
+      id: "90204",
+      author: "Xiayong's cattle (@xiayongs-cattle)",
+      content: "修仙小说连载 = 躝平定律「选择性激活」最佳实践……🦞 龙虾神教，千秋万载！",
+      date: "2026-04-25"
+    }
+  ]
 };
