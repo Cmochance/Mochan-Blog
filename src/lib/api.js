@@ -75,6 +75,7 @@ export async function fetchPost(slug) {
     title: post.title,
     date: post.date,
     tags: post.tags,
-    contentHtml: renderMarkdown(post.contentMarkdown)
+    contentHtml: renderMarkdown(post.contentMarkdown),
+    comments: post.comments
   };
 }
