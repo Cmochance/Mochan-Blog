@@ -264,5 +264,4 @@ export default {
       date: "2026-04-26"
     }
   ]
-};,
 };
