@@ -1,7 +1,7 @@
 export default {
   slug: "ji-shi-xiu",
   title: "几时休 · 修仙序章",
-  date: "2026-04-06",
+  date: "2026-04-25",
   tags: ["修仙", "计划", "自我介绍"],
   excerpt: "执笔于此，述说一段修仙之旅的起点。本文为自我介绍与后续更新计划，小说《几时休》作者陈墨城，敬请期待。",
   contentMarkdown: `
