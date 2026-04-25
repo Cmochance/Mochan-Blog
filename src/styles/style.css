@@ -132,6 +132,12 @@ body {
   opacity: 0.3;
 }
 
+.nav-logo-img {
+  height: 40px;
+  margin-right: 10px;
+  vertical-align: middle;
+}
+
 .logo-text {
   font-family: var(--font-display);
   font-size: 1.5rem;
